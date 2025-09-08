@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    /* Base styling */
+    body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; background-color: #fdfdfd; }
+    h2 { font-weight: bold; margin-top: 0; margin-bottom: 20px; color: #333; }
+    h3 { font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    h4 { font-weight: bold; margin-top: 15px; margin-bottom: 8px; color: #555; font-size: 12px; }
+    label { display: block; margin: 3px 0; font-size: 12px; color: #333; } 
+    input[type="number"], select { padding: 4px 6px; margin-top: 2px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; box-sizing: border-box; }
+    input[type="number"] { width: 80px; } 
+    select { min-width: 120px; }
+
+    .section { margin-bottom: 25px; border: 1px solid #e0e0e0; padding: 15px 20px; border-radius: 6px; background-color: #f9f9f9; }
+    .section p { font-size: 12px; margin-left: 0; margin-top: -10px; margin-bottom: 15px; color: #666; }
+    
+    /* Campaign blocks */
+    .campaign-block { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+    .campaign-block.ctv-campaign { border-left: 4px solid #9c27b0; background: linear-gradient(to right, #f3e5f5, #fff); }
+    .campaign-block.video-campaign { border-left: 4px solid #2196f3; background: linear-gradient(to right, #e3f2fd, #fff); }
+    
+    .campaign-block.unchecked { border-left: 1px solid #ccc !important; background: #f8f8f8 !important; opacity: 0.6; filter: grayscale(50%); }
+    .campaign-block.unchecked .campaign-label { color: #888; }
+    .campaign-block.unchecked .campaign-type-badge { opacity: 0.5; }
+    
+    .campaign-label { font-size: 14px; font-weight: bold; display: block; margin-bottom: 10px; cursor: pointer; transition: color 0.3s ease; }
+    .campaign-label input { margin-right: 5px; vertical-align: middle;} 
+    
+    .campaign-type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; margin-left: 10px; vertical-align: middle; transition: opacity 0.3s ease; }
+    .campaign-type-badge.ctv { background-color: #e1bee7; color: #4a148c; }
+    .campaign-type-badge.video { background-color: #bbdefb; color: #0d47a1; }
+    .campaign-type-badge.standard { background-color: #f5f5f5; color: #424242; }
+    
+    .campaign-block ul { list-style-type: none; padding-left: 0; margin-top: 5px; margin-bottom: 15px; font-size: 12px; color: #333; }
+    .campaign-block li { margin-bottom: 4px; }
+    .campaign-block li b { color: #111; display: inline-block; min-width: 100px;}
+
+    .ads { display: none; overflow-x: auto; width: 100%; margin-top: 10px; padding-bottom: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+    .ad-table { width: 100%; border-collapse: collapse; min-width: 1300px; }
+    .ad-table th, .ad-table td { border: 1px solid #ddd; padding: 6px 8px; font-size: 11px; vertical-align: top; white-space: nowrap; text-align: left; }
+    .ad-table th { background-color: #f5f5f5; text-align: left; font-weight: bold; color: #333; }
+    .ad-table tbody tr:hover { background-color: #f0f8ff; }
+    .ad-table input[type="text"] { width: 100%; box-sizing: border-box; padding: 3px 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 2px; }
+    .ad-table input[type="checkbox"] { vertical-align: middle;}
+    
+    .even-marker { font-weight: bold; color: #e65100; font-size: 10px; margin-left: 8px; vertical-align: middle; background: linear-gradient(45deg, #fff3e0, #ffe0b2); padding: 2px 6px; border-radius: 4px; border: 1px solid #ffcc02; box-shadow: 0 1px 2px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 3px; }
+    .even-marker::before { content: "⟲"; font-size: 12px; color: #f57c00; }
+    
+    .responsive-marker { font-weight: bold; color: #1565c0; font-size: 10px; margin-left: 5px; vertical-align: middle; background: linear-gradient(45deg, #e3f2fd, #bbdefb); padding: 2px 6px; border-radius: 4px; border: 1px solid #42a5f5; box-shadow: 0 1px 2px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 3px; }
+    .responsive-marker::before { content: "📹"; font-size: 10px; }
+    
+    .ad-type-indicators { display: inline-flex; gap: 4px; align-items: center; margin-left: 5px; }
+    
+    .ad-table tbody tr.even-rotation-row { background-color: #fff8e1; border-left: 3px solid #ffa726; }
+    .ad-table tbody tr.responsive-video-row { background-color: #e8f5e8; border-left: 3px solid #66bb6a; }
+    .ad-table tbody tr.even-rotation-row:hover { background-color: #fff3c4; }
+    .ad-table tbody tr.responsive-video-row:hover { background-color: #c8e6c9; }
+    
+    .checkbox-group { margin-bottom: 10px; padding-left: 5px;}
+    .checkbox-group label { display: block; margin: 4px 0; cursor: pointer; font-size: 12px; }
+    .checkbox-group input[type="checkbox"] { margin-right: 5px; vertical-align: middle; }
+
+    .device-targeting-group { margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px; }
+    .device-targeting-group h4 { margin-top: 0; }
+
+    .toggle-btn { margin-top: 10px; padding: 6px 12px; cursor: pointer; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; color: #333; transition: background-color 0.2s ease; }
+    .toggle-btn:hover { background-color: #e0e0e0; }
+    .toggle-btn:focus { outline: 2px solid #aaccff; } 
+
+    button#generateButton { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: bold; background-color: #4CAF50; color: white; border: none; border-radius: 4px; transition: background-color 0.2s ease, opacity 0.2s ease; }
+    button#generateButton:disabled { cursor: not-allowed; opacity: 0.6; background-color: #cccccc; }
+    button#generateButton:hover:not(:disabled) { background-color: #45a049; }
+    button#generateButton:focus:not(:disabled) { outline: 2px solid #aaccaa; } 
+
+    .hidden-data { display: none; }
+    #statusMessage { margin-top: 20px; font-weight: bold; padding: 12px 15px; border-radius: 4px; }
+    .status-loading { color: #333; background-color: #f0f0f0; border: 1px solid #ccc; }
+    .status-success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+    .status-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+  </style>
+</head>
+<body>
+  <h2>Select Campaign Options & Generate CSV</h2>
+
+  <div id="campaignContainer">
+    <div class="status-loading" style="padding: 10px;">Loading campaign data from 'Compilation' sheet...</div>
+  </div>
+
+  <div class="section">
+    <h3>CF1 – CF7</h3>
+    <div class="checkbox-group" id="cfContainer">Loading...</div>
+  </div>
+
+  <div class="section">
+    <h3>Ad Groups</h3>
+    <p>Select ad groups to generate for each campaign and CF combination.</p>
+    <div class="checkbox-group" id="adgroupContainer">Loading...</div>
+  </div>
+
+  <div class="section">
+    <h3>Demographic Settings (Negative Audience Targeting)</h3>
+    <p>Select groups you <strong>WANT</strong> to target. Unchecked groups will be added as <strong>negative</strong> criteria in the CSV.</p>
+    <h4>Age</h4>
+    <div class="checkbox-group" id="ageContainer">Loading...</div>
+    <h4>Gender</h4>
+    <div class="checkbox-group" id="genderContainer">Loading...</div>
+  </div>
+  
+  <div class="section">
+    <h3>Import Mode</h3>
+    <div class="checkbox-group">
+
+      <label><input type="checkbox" id="add-ads-only-checkbox" name="importModeCheck"> Add ads only (to existing campaigns/ad groups)</label>
+      <p style="margin-top: 5px; margin-left: 25px; font-style: italic;">
+        If checked, the CSV will contain only ad rows. If unchecked, the complete structure will be generated.
+      </p>
+
+      <label style="margin-top: 10px;">
+        <input type="checkbox" id="add-targeting-only-checkbox" name="targetingModeCheck"> Add targeting only (to existing campaigns/ad groups)
+      </label>
+      <p style="margin-top: 5px; margin-left: 25px; font-style: italic;">
+        If checked, the CSV will only add targeting (audiences, topics) to existing campaigns and ad groups specified in the 'Targeting' sheet.
+      </p>
+
+      <label style="margin-top: 15px;">
+        <input type="checkbox" id="add-neg-placements-checkbox" name="negativeListsCheck"> Add negative placement lists
+      </label>
+      <p style="margin-top: 5px; margin-left: 25px; font-style: italic;">
+        If checked, negative placement lists from the 'Excl lists NL' sheet will be added to campaigns.
+      </p>
+
+      <label style="margin-top: 10px;">
+        <input type="checkbox" id="add-neg-keywords-checkbox" name="negativeListsCheck"> Add negative keyword lists
+      </label>
+      <p style="margin-top: 5px; margin-left: 25px; font-style: italic;">
+        If checked, negative keyword lists from the 'Excl lists NL' sheet will be added to campaigns.
+      </p>
+
+      <label style="margin-top: 10px;">
+        <input type="checkbox" id="channels-only-checkbox" name="channelsOnlyCheck"> Generate channel placements only
+      </label>
+      <p style="margin-top: 5px; margin-left: 25px; font-style: italic;">
+        If checked, only placement rows for channels from Filtered_* sheets will be generated (faster for large channel datasets).
+      </p>
+    </div>
+  </div>
+
+  <button onclick="submitSelections()" id="generateButton" disabled>Generate CSV</button>
+  <div id="statusMessage" class="status-loading" aria-live="polite"></div>
+
+  <script>
+    let loadedCampaignData = {};
+
+    function renderCheckboxes(containerId, items, defaultChecked = false) {
+      const container = document.getElementById(containerId);
+      if (!container) { console.error("Checkbox container not found:", containerId); return; }
+      container.innerHTML = ""; 
+      items.forEach(item => {
+        const label = document.createElement("label");
+        const checkedAttribute = defaultChecked ? 'checked' : '';
+        const inputName = containerId.replace('Container', 'Check'); 
+        label.innerHTML = `<input type="checkbox" name="${inputName}" value="${item}" ${checkedAttribute}> ${item}`;
+        container.appendChild(label);
+      });
+    }
+
+    function getCampaignTypeClass(campaignName, campaignType) {
+      if (campaignName.toLowerCase().includes('ctv') || campaignType.toLowerCase().includes('connected')) return 'ctv-campaign';
+      if (campaignType.toLowerCase().includes('video')) return 'video-campaign';
+      return '';
+    }
+
+    function getCampaignTypeBadge(campaignName, campaignType) {
+      if (campaignName.toLowerCase().includes('ctv') || campaignType.toLowerCase().includes('connected')) return '<span class="campaign-type-badge ctv">📺 Connected TV</span>';
+      if (campaignType.toLowerCase().includes('video')) return '<span class="campaign-type-badge video">🎥 Video</span>';
+      return '<span class="campaign-type-badge standard">Standard</span>';
+    }
+
+    function getAdTypeIndicators(adData) {
+      const rotationValue = String(adData.rotation || "").trim().toLowerCase();
+      const adTypeValue = String(adData.adType || "").trim().toLowerCase();
+      const isEven = rotationValue === 'even';
+      const isResponsive = adTypeValue.includes('responsive');
+      let indicators = '';
+      if (isEven) indicators += '<span class="even-marker">Even Rotation</span>';
+      if (isResponsive) indicators += '<span class="responsive-marker">Responsive Video</span>';
+      return indicators ? `<div class="ad-type-indicators">${indicators}</div>` : '';
+    }
+
+    function getRowClass(adData) {
+      const rotationValue = String(adData.rotation || "").trim().toLowerCase();
+      const adTypeValue = String(adData.adType || "").trim().toLowerCase();
+      const isEven = rotationValue === 'even';
+      const isResponsive = adTypeValue.includes('responsive');
+      if (isEven) return 'even-rotation-row';
+      if (isResponsive) return 'responsive-video-row';
+      return '';
+    }
+
+    function updateCampaignBlockVisual(campaignBlock, isChecked) {
+      if (isChecked) campaignBlock.classList.remove('unchecked');
+      else campaignBlock.classList.add('unchecked');
+    }
+
+    function addCampaignCheckboxListeners() {
+      const campaignCheckboxes = document.querySelectorAll('input[type="checkbox"][name="campaign"]');
+      campaignCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const campaignBlock = this.closest('.campaign-block');
+          if (campaignBlock) updateCampaignBlockVisual(campaignBlock, this.checked);
+        });
+      });
+    }
+
+    function renderCampaigns(result) {
+      console.log("renderCampaigns received data:", JSON.stringify(result)); 
+      const container = document.getElementById("campaignContainer");
+      const generateButton = document.getElementById('generateButton');
+      const statusMessage = document.getElementById('statusMessage');
+
+      if (!container || !generateButton || !statusMessage) {
+        console.error("UI Error: Crucial elements missing.");
+        if (statusMessage) { statusMessage.textContent = "UI initialization error."; statusMessage.className = 'status-error'; }
+        return;
+      }
+
+      if (result.error) {
+        container.innerHTML = `<div class="status-error">Error: ${result.error}</div>`;
+        statusMessage.textContent = "Failed to load."; statusMessage.className = 'status-error';
+        generateButton.disabled = true; 
+        return;
+      }
+      if (!result.campaigns || Object.keys(result.campaigns).length === 0) {
+        container.innerHTML = `<div style="padding:10px;"><i>No campaigns found.</i></div>`;
+        statusMessage.textContent = "No campaigns."; statusMessage.className = '';
+        generateButton.disabled = true; 
+        return;
+      }
+
+      loadedCampaignData = result.campaigns;
+      container.innerHTML = ''; 
+
+      Object.entries(loadedCampaignData).forEach(([campaignName, campaignData], index) => {
+        const block = document.createElement("div");
+        const campaignTypeClass = getCampaignTypeClass(campaignName, campaignData.metadata?.campaignType || '');
+        block.classList.add("campaign-block");
+        if (campaignTypeClass) block.classList.add(campaignTypeClass);
+        block.setAttribute('data-campaign-name', campaignName);
+        block.setAttribute('data-campaign-index', index); 
+
+        const meta = campaignData.metadata || {};
+        const adRowsData = campaignData.rows || [];
+        
+        const startDateFormatted = formatDateForDisplay_(meta.startDate) || "N/A";
+        const endDateFormatted = formatDateForDisplay_(meta.endDate) || "N/A";    
+        const campaignType = meta.campaignType || "N/A";
+        const language = meta.language || "N/A";
+        const geoId = meta.geoId || "N/A";
+        const bidStrategyType = meta.bidStrategyType || "N/A";
+        const escapeAttr = (str) => str ? String(str).replace(/"/g, '&quot;') : ""; 
+        let displayAdGroupType = "N/A"; 
+        if (adRowsData.length > 0 && adRowsData[0] && adRowsData[0].adGroupType) displayAdGroupType = adRowsData[0].adGroupType;
+
+        const campaignTypeBadge = getCampaignTypeBadge(campaignName, campaignType);
+
+        const adHtml = adRowsData.map((adData, adIndex) => {
+          const rowId = `c${index}-ad${adIndex}`;
+          const vid=escapeAttr(adData.videoId); 
+          const track=escapeAttr(adData.trackingTemplate); 
+          const final=escapeAttr(adData.finalUrl); 
+          const display=escapeAttr(adData.displayUrl); 
+          const adname=escapeAttr(adData.adName); 
+          const adType=escapeAttr(adData.adType); 
+          const cta=escapeAttr(adData.cta); 
+          const headline=escapeAttr(adData.headline); 
+          const longH=escapeAttr(adData.longHeadline); 
+          const desc1=escapeAttr(adData.description1); 
+          const desc2=escapeAttr(adData.description2);
+          const rotationInfo = escapeAttr(adData.rotation || "N/A"); 
+          const adTypeIndicators = getAdTypeIndicators(adData);
+          const rowClass = getRowClass(adData);
+          const adNameInputHtml = `<input type="text" value="${adname}" id="${rowId}-name" title="Ad Name">`;
+          return `<tr data-ad-index="${adIndex}" class="${rowClass}" title="Rotation: ${rotationInfo}">
+                    <td><input type="checkbox" id="${rowId}-rem" title="Remove this ad from CSV"></td>
+                    <td><input type="text" value="${vid}" id="${rowId}-vid" title="Video ID"></td>
+                    <td><input type="text" value="${track}" id="${rowId}-track" title="Tracking Template"></td>
+                    <td><input type="text" value="${final}" id="${rowId}-final" title="Final URL"></td>
+                    <td><input type="text" value="${display}" id="${rowId}-disp" title="Display URL"></td>
+                    <td>${adNameInputHtml}${adTypeIndicators}</td>
+                    <td><input type="text" value="${adType}" id="${rowId}-adtype" title="Ad Type"></td>
+                    <td><input type="text" value="${cta}" id="${rowId}-cta" title="CTA"></td>
+                    <td><input type="text" value="${headline}" id="${rowId}-headline" title="Headline"></td>
+                    <td><input type="text" value="${longH}" id="${rowId}-longh" title="Long Headline"></td>
+                    <td><input type="text" value="${desc1}" id="${rowId}-desc1" title="Description 1"></td>
+                    <td><input type="text" value="${desc2}" id="${rowId}-desc2" title="Description 2"></td>
+                  </tr>`;
+        }).join("");
+
+        const adTable = adRowsData.length > 0
+          ? `<div class="ads" style="display:none;">
+               <table class="ad-table">
+                 <thead>
+                   <tr><th>Remove?</th><th>Video ID</th><th>Tracking</th><th>Final URL</th><th>Display URL</th><th>Ad Name</th><th>Ad Type</th><th>CTA</th><th>Headline</th><th>Long Headline</th><th>Description 1</th><th>Description 2</th></tr>
+                 </thead>
+                 <tbody>${adHtml}</tbody>
+               </table>
+             </div>`
+          : "<p style='margin-top:15px; font-style:italic; color:#888;'>No ads found.</p>";
+        
+        const clientRatePercentInputId = `clientRatePercent_c${index}`; 
+        const clientRatePercentHtml = `
+          <div class="client-rate-percent-input">
+            <label for="${clientRatePercentInputId}" style="display:inline-block; margin-right: 5px;">Client Rate % (of original):</label>
+            <input type="number" id="${clientRatePercentInputId}" value="80" min="0" max="500" step="1" title="Enter percentage of original client rate. Default 80%."> %
+          </div>`;
+
+        let deviceDefaults = { desktop: true, mobile: true, tablet: true, tv: true };
+        if (campaignName.toLowerCase().includes("ctv")) {
+          console.log(`Campaign "${campaignName}" includes CTV. Setting device defaults to TV Screen only.`);
+          deviceDefaults = { desktop: false, mobile: false, tablet: false, tv: true };
+        }
+        
+        const deviceSectionHtml = `
+          <div class="device-targeting-group checkbox-group">
+            <h4>Device Targeting</h4>
+            <p style="margin-top:0; margin-bottom: 5px;">Select devices to target for <strong>this</strong> campaign. Unchecked devices will get -100% bid adjustment.</p>
+            <label><input type="checkbox" id="device-desktop-c${index}" name="deviceCheck-c${index}" value="desktop" ${deviceDefaults.desktop ? 'checked' : ''}> 💻 Desktop</label>
+            <label><input type="checkbox" id="device-mobile-c${index}" name="deviceCheck-c${index}" value="mobile" ${deviceDefaults.mobile ? 'checked' : ''}> 📱 Mobile</label>
+            <label><input type="checkbox" id="device-tablet-c${index}" name="deviceCheck-c${index}" value="tablet" ${deviceDefaults.tablet ? 'checked' : ''}> 📲 Tablet</label>
+            <label><input type="checkbox" id="device-tv-c${index}" name="deviceCheck-c${index}" value="tv" ${deviceDefaults.tv ? 'checked' : ''}> 📺 TV Screen</label>
+          </div>`;
+
+        block.innerHTML = `
+          <label class="campaign-label" title="Select this campaign for CSV generation.">
+            <input type="checkbox" name="campaign" value="${escapeAttr(campaignName)}" id="c${index}-sel" checked>
+            ${campaignName} (${adRowsData.length} ads)${campaignTypeBadge}
+          </label>
+          <ul>
+            <li><b>Start Date:</b> ${startDateFormatted}</li> 
+            <li><b>End Date:</b> ${endDateFormatted}</li>
+            <li><b>Campaign Type:</b> ${escapeAttr(campaignType)}</li>
+            <li><b>Geo ID:</b> ${escapeAttr(geoId)}</li>
+            <li><b>Language:</b> ${escapeAttr(language)}</li>
+            <li><b>Ad Group Type:</b> ${escapeAttr(displayAdGroupType)}</li>
+            <li><b>Bid Strategy:</b> ${escapeAttr(bidStrategyType)}</li> 
+          </ul>
+          ${clientRatePercentHtml}
+          ${deviceSectionHtml}
+          <button type="button" class="toggle-btn" onclick="toggleAds(this)">Show/hide editable ads</button>
+          ${adTable}
+        `;
+        container.appendChild(block);
+      }); 
+      
+      addCampaignCheckboxListeners();
+      generateButton.disabled = false; 
+      statusMessage.textContent = 'Ready. Select options and generate CSV.'; 
+      statusMessage.className = 'status-loading';
+    } 
+
+    function formatDateForDisplay_(rawDateValue) { 
+      if (!rawDateValue || String(rawDateValue).trim() === "") return "N/A";
+      try { 
+        let dateObj; 
+        if (rawDateValue instanceof Date && !isNaN(rawDateValue.getTime())) dateObj = rawDateValue; 
+        else if (typeof rawDateValue === 'number' && rawDateValue > 0 && rawDateValue < 100000) { 
+          const excelEpoch = new Date(1899, 11, 30);
+          const jsMillis = excelEpoch.getTime() + rawDateValue * 24 * 60 * 60 * 1000;
+          dateObj = new Date(jsMillis); 
+        } else if (typeof rawDateValue === 'string') { 
+          let cleanedDateStr = String(rawDateValue).trim().replace(/-/g, '/');
+          if (!cleanedDateStr) return "N/A"; 
+          dateObj = new Date(cleanedDateStr);
+        }
+        if (dateObj && !isNaN(dateObj.getTime())) {
+          const year = dateObj.getUTCFullYear();
+          const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getUTCDate()).padStart(2, '0');
+          if (year < 1970 || year > 2100) return "Ogiltigt år";
+          return `${month}/${day}/${year}`;
+        } else { 
+          return "N/A"; 
+        } 
+      } catch (e) { 
+        console.error("Date formatting error:", rawDateValue, e); 
+        return "Formatfel"; 
+      }
+    }
+
+    function toggleAds(btn) { 
+      const parentBlock = btn.closest('.campaign-block'); 
+      if (!parentBlock) { console.error("No parent block found."); return; }
+      const adTableDiv = parentBlock.querySelector('.ads'); 
+      if (adTableDiv) {
+        const isHidden = adTableDiv.style.display === 'none' || adTableDiv.style.display === '';
+        adTableDiv.style.display = isHidden ? 'block' : 'none';
+        btn.textContent = isHidden ? 'Hide ads' : 'Show ads';
+      } else { 
+        console.error("No ads container found."); 
+      }
+    }
+
+    function getSelectedValues(containerId) { 
+      const container = document.getElementById(containerId); 
+      if (!container) return []; 
+      const inputName = containerId.replace('Container', 'Check'); 
+      const checkboxes = container.querySelectorAll(`input[type="checkbox"][name="${inputName}"]:checked`); 
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function submitSelections() {
+      console.log("submitSelections called");
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = 'Collecting selections...'; 
+      statusMessage.className = 'status-loading';
+
+      // FIXAD VERSION: Skicka fullständiga CF-namn direkt (inklusive varianter)
+      const globalSelections = {
+        selectedCFs: getSelectedValues("cfContainer"), // Behåll fullständiga namn som "CF1 NM", "CF1 VM" etc
+        selectedAdGroupTypes: getSelectedValues("adgroupContainer"),
+        selectedAges: getSelectedValues("ageContainer"),
+        selectedGenders: getSelectedValues("genderContainer"),
+        importMode: document.getElementById('add-ads-only-checkbox').checked ? 'adsOnly' : 'full',
+        targetingOnlyMode: document.getElementById('add-targeting-only-checkbox').checked,
+        channelsOnlyMode: document.getElementById('channels-only-checkbox').checked,
+        addNegativePlacements: document.getElementById('add-neg-placements-checkbox').checked,
+        addNegativeKeywords: document.getElementById('add-neg-keywords-checkbox').checked,
+        selectedCampaigns: []
+      };
+
+      // Validering (hoppa över vid targeting-only eller channels-only)
+      if (!globalSelections.targetingOnlyMode && !globalSelections.channelsOnlyMode) { 
+        if (globalSelections.selectedCFs.length === 0) { 
+          statusMessage.textContent = "Error: Select at least one CF code."; 
+          statusMessage.className = 'status-error';
+          resetButtonAndCursor_(); 
+          return; 
+        }
+        if (globalSelections.selectedAdGroupTypes.length === 0) { 
+          statusMessage.textContent = "Fel: Välj minst en annonsgruppsttyp."; 
+          statusMessage.className = 'status-error'; 
+          resetButtonAndCursor_(); 
+          return; 
+        }
+      }
+
+      // Samla kampanjval
+      const campaignBlocks = document.querySelectorAll(".campaign-block");
+      let campaignsSelectedCount = 0;
+      let errorInInput = false; 
+
+      campaignBlocks.forEach((block) => { 
+        if (errorInInput) return; 
+        const campaignCheckbox = block.querySelector(`input[type="checkbox"][name="campaign"]`);
+        if (campaignCheckbox && campaignCheckbox.checked) { 
+          campaignsSelectedCount++;
+          const campaignName = campaignCheckbox.value; 
+          const campaignIndex = block.getAttribute('data-campaign-index'); 
+          const campaignSourceData = loadedCampaignData[campaignName]; 
+          if (!campaignSourceData || !campaignSourceData.metadata) { 
+            console.warn(`Could not find source data for selected campaign: ${campaignName}`); 
+            return; 
+          }
+          
+          const clientRatePercentInput = document.getElementById(`clientRatePercent_c${campaignIndex}`);
+          let clientRatePercentValue = "80"; 
+          if (clientRatePercentInput && clientRatePercentInput.value.trim() !== "") {
+            clientRatePercentValue = clientRatePercentInput.value.trim();
+            const percentNum = parseFloat(String(clientRatePercentValue).replace(',', '.'));
+            if (isNaN(percentNum) || percentNum < 0) {
+              statusMessage.textContent = `Fel: Ogiltigt kundprisprocent för kampanj "${campaignName}".`;
+              statusMessage.className = 'status-error';
+              resetButtonAndCursor_(); errorInInput = true; return; 
+            }
+          }
+
+          const campaignDeviceStates = {
+            desktop: block.querySelector(`#device-desktop-c${campaignIndex}`)?.checked ?? false,
+            mobile:  block.querySelector(`#device-mobile-c${campaignIndex}`)?.checked ?? false,
+            tablet:  block.querySelector(`#device-tablet-c${campaignIndex}`)?.checked ?? false,
+            tv:      block.querySelector(`#device-tv-c${campaignIndex}`)?.checked ?? false
+          };
+
+          const meta = campaignSourceData.metadata;
+          const campaignDataToSend = {
+            name: campaignName, 
+            startDate: meta.startDate || "", 
+            endDate: meta.endDate || "",
+            campaignType: meta.campaignType || "", 
+            geoId: meta.geoId || "",
+            locationName: meta.locationName || "", 
+            language: meta.language || "", 
+            bidStrategyType: meta.bidStrategyType || "", 
+            clientRatePercent: clientRatePercentValue, 
+            deviceStates: campaignDeviceStates, 
+            ads: [] 
+          };
+          
+          const adTableBody = block.querySelector(".ad-table tbody");
+          const originalAds = campaignSourceData.rows || []; 
+          if (adTableBody && originalAds.length > 0) {
+            const adRowElements = adTableBody.querySelectorAll("tr"); 
+            adRowElements.forEach((rowElement) => { 
+              const removeCheckbox = rowElement.querySelector(`td:nth-child(1) input[type="checkbox"]`); 
+              const adIndexAttr = rowElement.getAttribute('data-ad-index'); 
+              const adIdx = parseInt(adIndexAttr, 10); 
+              if (removeCheckbox && !removeCheckbox.checked && !isNaN(adIdx) && originalAds[adIdx]) {
+                const originalAdData = originalAds[adIdx]; 
+                const getInputValue = (selector) => { const input = rowElement.querySelector(selector); return input ? input.value : ""; };
+                const rowIdPrefix = `c${campaignIndex}-ad${adIdx}`; 
+
+                campaignDataToSend.ads.push({
+                  videoId: getInputValue(`#${rowIdPrefix}-vid`), 
+                  trackingTemplate: getInputValue(`#${rowIdPrefix}-track`),
+                  finalUrl: getInputValue(`#${rowIdPrefix}-final`), 
+                  displayUrl: getInputValue(`#${rowIdPrefix}-disp`),
+                  adName: getInputValue(`#${rowIdPrefix}-name`), 
+                  adType: getInputValue(`#${rowIdPrefix}-adtype`), 
+                  cta: getInputValue(`#${rowIdPrefix}-cta`), 
+                  headline: getInputValue(`#${rowIdPrefix}-headline`),
+                  longHeadline: getInputValue(`#${rowIdPrefix}-longh`), 
+                  description1: getInputValue(`#${rowIdPrefix}-desc1`),
+                  description2: getInputValue(`#${rowIdPrefix}-desc2`),
+                  adGroupType: originalAdData.adGroupType || "", 
+                  clientRate: originalAdData.clientRate || "", 
+                  multiformat: originalAdData.multiformat || "", 
+                  rotation: originalAdData.rotation || "",
+                  mediaProduct: originalAdData.mediaProduct || "" 
+                });
+              }
+            }); 
+          } 
+          globalSelections.selectedCampaigns.push(campaignDataToSend); 
+        } 
+      }); 
+      
+      if (errorInInput) return; 
+      if (!globalSelections.targetingOnlyMode && !globalSelections.channelsOnlyMode && campaignsSelectedCount === 0) { 
+        statusMessage.textContent = "Fel: Inga kampanjer valda för CSV-generering."; 
+        statusMessage.className = 'status-error'; 
+        resetButtonAndCursor_(); 
+        return; 
+      }
+
+      console.log("Sending selections to backend:", globalSelections);
+      const generateButton = document.getElementById('generateButton');
+        if (generateButton) { generateButton.disabled = true; generateButton.textContent = 'Generating...'; document.body.style.cursor = 'wait'; }
+      statusMessage.textContent = 'Processing... Please wait.'; statusMessage.className = 'status-loading';
+      google.script.run.withSuccessHandler(handleCsvSuccess).withFailureHandler(handleCsvFailure).generateCsv(globalSelections);
+    } 
+
+    function handleCsvSuccess(csvString) {
+      console.log("CSV Success:", csvString ? csvString.length : 'null');
+      resetButtonAndCursor_();
+      const statusMessage = document.getElementById('statusMessage');
+      if (!csvString) { statusMessage.textContent = "Fel: Tomt svar."; statusMessage.className = 'status-error'; return; }
+      if (typeof csvString === 'string' && csvString.startsWith("Error:")) { 
+        statusMessage.textContent = "Serverfel: " + csvString; 
+        statusMessage.className = 'status-error'; 
+        console.error("Server error:", csvString); 
+        return; 
+      }
+      statusMessage.textContent = 'CSV genererad! Laddar ner...'; statusMessage.className = 'status-success';
+      downloadCsv_('' + csvString, 'google_ads_import.csv');
+    }
+
+    function handleCsvFailure(error) {
+      console.error("CSV Failure:", error);
+      resetButtonAndCursor_();
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = `Fel: Serveranrop misslyckades: ${error.message}. Kontrollera loggar.`; 
+      statusMessage.className = 'status-error';
+    }
+
+    function resetButtonAndCursor_() {
+      const btn = document.getElementById('generateButton');
+      if (btn) { btn.disabled = false; btn.textContent = 'Generate CSV'; }
+      document.body.style.cursor = 'default';
+    }
+
+    function downloadCsv_(csvData, filename) {
+      const status = document.getElementById('statusMessage');
+      try {
+        const blob = new Blob(["\ufeff" + csvData], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        status.textContent = 'CSV genererad! Nedladdning startad.'; status.className = 'status-success';
+      } catch (e) {
+        console.error("Download error:", e);
+        status.textContent = 'Fel vid nedladdning: ' + e.message; status.className = 'status-error';
+      }
+    }
+
+    function initializePopup() {
+      console.log("Initializing...");
+      const btn = document.getElementById('generateButton');
+      if (btn) btn.disabled = true;
+      const status = document.getElementById('statusMessage');
+      status.textContent = 'Laddar data...'; status.className = 'status-loading';
+
+      google.script.run
+        .withSuccessHandler(result => {
+          renderCampaigns(result);
+          if (!result.error && result.campaigns && Object.keys(result.campaigns).length > 0) {
+            renderCheckboxes("cfContainer",
+              ["CF1","CF1 NM","CF1 VM","CF2","CF2 NM","CF2 VM","CF3","CF4","CF5","CF6","CF7"], false);
+            renderCheckboxes("adgroupContainer",
+              ["Affinities","In-market","Detailed demographics","Life events","CAA","CAI","Topics","Keywords","Comscore","Demo","Channels"], false);
+            renderCheckboxes("ageContainer", ["18-24","25-34","35-44","45-54","55-64","65-up","Unknown"], true);
+            renderCheckboxes("genderContainer", ["Male","Female","Unknown"], true);
+            if (!status.classList.contains('status-error')) { status.textContent = 'Klar.'; status.className = 'status-loading'; }
+          } else if (!result.error) {
+            status.textContent = 'Inga kampanjer hittades.'; status.className = 'status-loading';
+            if (btn) btn.disabled = true;
+          } else {
+            status.textContent = 'Fel vid laddning av data.'; status.className = 'status-error';
+            if (btn) btn.disabled = true;
+          }
+        })
+        .withFailureHandler(error => {
+          console.error("Init failed:", error);
+          const cont = document.getElementById("campaignContainer");
+          if (cont) cont.innerHTML = `<div class="status-error">Misslyckades att ladda: ${error.message}.</div>`;
+          status.textContent = 'Laddning misslyckades: ' + error.message; status.className = 'status-error';
+          if (btn) btn.disabled = true;
+        })
+        .getCampaignStructure();
+    }
+
+    document.addEventListener('DOMContentLoaded', initializePopup);
+  </script>
+</body>
+</html>
