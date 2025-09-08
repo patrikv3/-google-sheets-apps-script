@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font: 13px/1.4 Arial, sans-serif; padding: 10px; }
+    .row { margin-bottom: 10px; }
+    .col { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    select, input[type="number"] { width: 100%; }
+    fieldset { border: 1px solid #ddd; padding: 8px; margin: 10px 0; }
+    legend { padding: 0 4px; font-weight: bold; }
+    .scroll { max-height: 220px; overflow: auto; border: 1px solid #eee; padding: 6px; }
+    .actions { display: flex; gap: 8px; align-items:center; }
+    .muted { color: #666; font-size: 12px; }
+    .pill { padding: 2px 6px; border: 1px solid #ccc; border-radius: 6px; }
+    .btn { padding: 6px 10px; cursor: pointer; }
+    .btn.primary { background: #1a73e8; color: #fff; border: 0; }
+    .btn.outline { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+    .hr { height: 1px; background: #eee; margin: 10px 0; }
+    .warning { color:#b45309; }
+  </style>
+</head>
+<body>
+  <h3>Channel Picker</h3>
+
+  <div class="row">
+    <label><b>Source sheet</b></label>
+    <select id="sheetSelect"></select>
+    <div class="muted">Rule hint: any <b>CF1*</b> must use sheet <b>“EN + Local”</b>. Any <b>CF2*</b> must use sheet <b>“All languages”</b>.</div>
+  </div>
+
+  <div class="row">
+    <label><b>Campaign tag</b></label>
+    <div class="col" id="tagRow">
+      <label class="pill"><input type="radio" name="tag" value="CF1"> CF1</label>
+      <label class="pill"><input type="radio" name="tag" value="CF1 NM"> CF1 NM</label>
+      <label class="pill"><input type="radio" name="tag" value="CF1 VM"> CF1 VM</label>
+      <label class="pill"><input type="radio" name="tag" value="CF2"> CF2</label>
+      <label class="pill"><input type="radio" name="tag" value="CF2 NM"> CF2 NM</label>
+      <label class="pill"><input type="radio" name="tag" value="CF2 VM"> CF2 VM</label>
+    </div>
+    <div class="col" style="margin-top:6px;">
+      <label><b>Target count (N)</b></label>
+      <input id="limit" type="number" min="1" value="18010"/>
+    </div>
+    <div class="muted" id="defaultsText"></div>
+    <div class="muted" id="ruleNote" style="margin-top:4px;"></div>
+  </div>
+
+  <fieldset>
+    <legend>Include Languages (column E)</legend>
+    <div class="actions">
+      <button class="btn outline" type="button" id="langAll">Select all</button>
+      <button class="btn outline" type="button" id="langNone">Clear all</button>
+      <label class="pill" style="margin-left:auto;"><input id="inclBlankLang" type="checkbox" checked> Include blank language</label>
+    </div>
+    <div id="langList" class="scroll"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Include Categories (column F)</legend>
+    <div class="actions">
+      <button class="btn outline" type="button" id="catAll">Select all</button>
+      <button class="btn outline" type="button" id="catNone">Clear all</button>
+      <label class="pill" style="margin-left:auto;"><input id="inclBlankCat" type="checkbox" checked> Include blank category</label>
+    </div>
+    <div id="catList" class="scroll"></div>
+    <div class="muted">NM variants exclude “Music &amp; Audio”. VM variants allow only “Music &amp; Audio”.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Sort</legend>
+    <div class="col">
+      <label>Sort by</label>
+      <select id="sortKey">
+        <option value="none">None (keep sheet order)</option>
+        <option value="A">Column A</option>
+        <option value="E">Column E (Language)</option>
+        <option value="F">Column F (Primary_Category)</option>
+      </select>
+      <select id="sortDir">
+        <option value="desc">Descending</option>
+        <option value="asc">Ascending</option>
+      </select>
+    </div>
+  </fieldset>
+
+  <div class="actions">
+    <button id="runBtn" class="btn primary">Create filtered sheet</button>
+    <div id="status" class="muted"></div>
+  </div>
+
+  <div class="hr"></div>
+  <div class="muted" id="result"></div>
+
+  <script>
+    let meta = null;
+    const MA = 'Music & Audio';
+
+    function htmlEscape(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function selectedTagValue(){
+      const r = document.querySelector('input[name="tag"]:checked');
+      return r ? r.value : '';
+    }
+
+    function applyTagRulesToUI() {
+      const val = selectedTagValue();
+      const isNM = /\bNM\b/i.test(val);
+      const isVM = /\bVM\b/i.test(val);
+      const note = document.getElementById('ruleNote');
+
+      const boxes = document.querySelectorAll('#catList input[type="checkbox"]');
+      boxes.forEach(cb => {
+        const v = cb.getAttribute('data-val');
+        // reset
+        cb.disabled = false;
+        cb.parentElement.style.opacity = 1;
+
+        if (isNM) {
+          if (v === MA) {
+            cb.checked = false;
+            cb.disabled = true;
+            cb.parentElement.style.opacity = 0.6;
+            cb.parentElement.title = 'Excluded by NM rule';
+          }
+        } else if (isVM) {
+          if (v === MA) {
+            cb.checked = true;
+          } else {
+            cb.checked = false;
+            cb.disabled = true;
+            cb.parentElement.style.opacity = 0.6;
+            cb.parentElement.title = 'Only “Music & Audio” allowed for VM';
+          }
+        }
+      });
+
+      note.textContent = isNM
+        ? 'NM rule active: “Music & Audio” is excluded.'
+        : isVM
+          ? 'VM rule active: only “Music & Audio” is allowed.'
+          : '';
+    }
+
+    function updateLimitByTag() {
+      const v = selectedTagValue();
+      const base = v.startsWith('CF1') ? 'CF1' : 'CF2';
+      const def = meta.rules[base];
+      const limitEl = document.getElementById('limit');
+      if (!Number(limitEl.value)) limitEl.value = def.limit;
+      showDefaultsText();
+    }
+
+    function showDefaultsText() {
+      const defaults = document.getElementById('defaultsText');
+      const tag = selectedTagValue();
+      const sheetName = document.getElementById('sheetSelect').value;
+      const cf1 = meta.rules['CF1'], cf2 = meta.rules['CF2'];
+      if (!tag) { defaults.textContent = 'Pick a campaign tag.'; return; }
+      defaults.textContent = tag.startsWith('CF1')
+        ? `Defaults: ${cf1.sheet} → CF1*, N = ${cf1.limit}. Current sheet: “${sheetName}”.`
+        : `Defaults: ${cf2.sheet} → CF2*, N = ${cf2.limit}. Current sheet: “${sheetName}”.`;
+    }
+
+    function renderLists() {
+      const langBox = document.getElementById('langList');
+      langBox.innerHTML = '';
+      (meta.languages || []).forEach(v => {
+        const id = 'lg_' + btoa(encodeURIComponent(v)).replace(/=/g,'');
+        langBox.insertAdjacentHTML('beforeend',
+          `<label style="display:block"><input type="checkbox" id="${id}" data-val="${htmlEscape(v)}" checked> ${htmlEscape(v)}</label>`);
+      });
+
+      const catBox = document.getElementById('catList');
+      catBox.innerHTML = '';
+      (meta.categories || []).forEach(v => {
+        const id = 'ct_' + btoa(encodeURIComponent(v)).replace(/=/g,'');
+        catBox.insertAdjacentHTML('beforeend',
+          `<label style="display:block"><input type="checkbox" id="${id}" data-val="${htmlEscape(v)}" checked> ${htmlEscape(v)}</label>`);
+      });
+
+      applyTagRulesToUI();
+    }
+
+    function loadMeta(name) {
+      document.getElementById('status').textContent = 'Loading…';
+      google.script.run.withSuccessHandler(res => {
+        meta = res;
+
+        const sel = document.getElementById('sheetSelect');
+        sel.innerHTML = '';
+        res.sheetNames.forEach(n => {
+          const opt = document.createElement('option');
+          opt.value = n; opt.textContent = n;
+          if (n === res.active) opt.selected = true;
+          sel.appendChild(opt);
+        });
+
+        autoSetTagAndLimit();
+        renderLists();
+        showDefaultsText();
+
+        document.getElementById('status').textContent = '';
+      }).withFailureHandler(err => {
+        document.getElementById('status').textContent = '';
+        document.getElementById('result').textContent = 'Error: ' + (err.message || err);
+      }).getMeta(name || null);
+    }
+
+    function getChecked(containerId) {
+      const allBoxes = Array.from(document.querySelectorAll('#' + containerId + ' input[type="checkbox"]'));
+      const checked = allBoxes.filter(cb => cb.checked).map(el => el.getAttribute('data-val'));
+      return checked.length === allBoxes.length ? [] : checked;
+    }
+
+    function autoSetTagAndLimit() {
+      const name = document.getElementById('sheetSelect').value;
+      const limitEl = document.getElementById('limit');
+      const cf1 = meta.rules['CF1'];
+      const cf2 = meta.rules['CF2'];
+
+      if (name === cf1.sheet) {
+        document.querySelector('input[name="tag"][value="CF1"]').checked = true;
+        limitEl.value = cf1.limit;
+      } else if (name === cf2.sheet) {
+        document.querySelector('input[name="tag"][value="CF2"]').checked = true;
+        limitEl.value = cf2.limit;
+      }
+      showDefaultsText();
+      applyTagRulesToUI();
+    }
+
+    // Events
+    document.getElementById('sheetSelect').addEventListener('change', e => loadMeta(e.target.value));
+    Array.from(document.querySelectorAll('input[name="tag"]')).forEach(r => {
+      r.addEventListener('change', () => {
+        applyTagRulesToUI();
+        updateLimitByTag();
+      });
+    });
+
+    document.getElementById('langAll').onclick  = () =>
+      document.querySelectorAll('#langList input').forEach(cb => cb.checked = true);
+    document.getElementById('langNone').onclick = () =>
+      document.querySelectorAll('#langList input').forEach(cb => cb.checked = false);
+
+    document.getElementById('catAll').onclick  = () => {
+      document.querySelectorAll('#catList input').forEach(cb => cb.checked = true);
+      applyTagRulesToUI(); // re-lock for NM/VM
+    };
+    document.getElementById('catNone').onclick = () => {
+      document.querySelectorAll('#catList input').forEach(cb => cb.checked = false);
+      applyTagRulesToUI(); // re-lock for NM/VM
+    };
+
+    document.getElementById('runBtn').addEventListener('click', () => {
+      const opts = {
+        sourceSheet: document.getElementById('sheetSelect').value,
+        tag: selectedTagValue(),
+        includeLanguages: getChecked('langList'),
+        includeCategories: getChecked('catList'),
+        includeBlankLanguage: document.getElementById('inclBlankLang').checked,
+        includeBlankCategory: document.getElementById('inclBlankCat').checked,
+        limit: Number(document.getElementById('limit').value || 0),
+        sortKey: document.getElementById('sortKey').value,
+        sortDir: document.getElementById('sortDir').value
+      };
+
+      document.getElementById('status').textContent = 'Processing…';
+      document.getElementById('result').textContent = '';
+
+      google.script.run.withSuccessHandler(res => {
+        document.getElementById('status').textContent = '';
+        document.getElementById('result').innerHTML =
+          `Created <b>${res.targetName}</b> with <b>${res.kept}</b> rows (after filter: ${res.totalAfterFilter}, limit: ${res.limit}).` +
+          (res.note ? ` <span class="muted">(${res.note})</span>` : '');
+      }).withFailureHandler(err => {
+        document.getElementById('status').textContent = '';
+        document.getElementById('result').innerHTML = '<span class="warning">Error:</span> ' + (err.message || err);
+      }).buildFiltered(opts);
+    });
+
+    // Init
+    loadMeta();
+  </script>
+</body>
+</html>
